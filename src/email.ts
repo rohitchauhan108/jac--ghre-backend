@@ -145,7 +145,7 @@ export const sendPasswordResetEmail = async (to: string, name: string, code: str
   });
 };
 
-export const CONTACT_INBOX = process.env.CONTACT_INBOX || 'anujrankmantra190@gmail.com';
+export const CONTACT_INBOX = process.env.CONTACT_INBOX || 'Ghrebeauty@gmail.com';
 
 export type ContactFormPayload = {
   name: string;

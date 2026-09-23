@@ -18,6 +18,6 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? required('JWT_SECRET') : 'dev-only-insecure-secret-change-me'),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '30d',
   resendApiKey: process.env.RESEND_API_KEY || '',
-  resendFromEmail: process.env.RESEND_FROM_EMAIL || 'Jac Ghré <anujrankmantra190@gmail.com>',
+  resendFromEmail: process.env.RESEND_FROM_EMAIL || 'Jac Ghré <accounts@dnddevelopment.net>',
   nodeEnv: process.env.NODE_ENV || 'development'
 };
