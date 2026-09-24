@@ -7,7 +7,7 @@ import {
   authOtpLimiter,
   authPasswordLimiter,
   authGeneralLimiter
-} from '../app.js';
+} from '../middleware/rateLimit.js';
 
 const router = Router();
 router.post('/register', authRegisterLimiter, register);

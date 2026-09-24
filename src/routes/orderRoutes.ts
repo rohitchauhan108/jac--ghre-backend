@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { createOrder, getOrder, getMyOrders } from '../controllers/orderController.js';
 import { requireAuth } from '../middleware/requireAuth.js';
-import { ordersLimiter, paymentLimiter } from '../app.js';
+import { ordersLimiter, paymentLimiter } from '../middleware/rateLimit.js';
 
 const router = Router();
 router.post('/', ordersLimiter, requireAuth, createOrder);
