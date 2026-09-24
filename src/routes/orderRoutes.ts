@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { createOrder, getOrder, getMyOrders } from '../controllers/orderController.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { ordersLimiter, paymentLimiter } from '../app.js';
 
 const router = Router();
-// Checkout requires a signed-in user.
-router.post('/', requireAuth, createOrder);
-router.get('/mine', requireAuth, getMyOrders);
-router.get('/:orderId', getOrder);
+router.post('/', ordersLimiter, requireAuth, createOrder);
+router.get('/mine', ordersLimiter, requireAuth, getMyOrders);
+router.get('/:orderId', ordersLimiter, getOrder);
 export default router;

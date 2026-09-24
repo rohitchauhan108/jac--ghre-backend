@@ -19,6 +19,31 @@ type OrderForEmail = {
 
 const rupee = (value: number) => `₹${value.toFixed(0)}`;
 
+const stripHtml = (html: string) =>
+  html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|tr|h1|h2|h3|h4|h5|h6|li)>/gi, '\n')
+    .replace(/<td[^>]*>/gi, '  ')
+    .replace(/<\/td>/gi, '\t')
+    .replace(/<th[^>]*>/gi, '  ')
+    .replace(/<\/th>/gi, '\t')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+const brand = 'Jac Ghré';
+const brandPlain = 'Jac Ghre';
+const helpLine = 'Need help? Reply to this email or reach out via our website.';
+
 const orderItemsHtml = (items: OrderItem[]) =>
   items
     .map(
@@ -84,13 +109,34 @@ export const sendOrderConfirmationEmail = async (order: OrderForEmail): Promise<
     `
   );
 
+  const subjectLine = `Order Confirmed — ${order.orderId} | Jac Ghré`;
+  const itemsPlain = order.items
+    .map(i => `- ${i.name} (${i.weight})  x${i.quantity}  ${rupee(i.unitPrice * i.quantity)}`)
+    .join('\n');
+  const discountLine = order.discount ? `Discount: -${rupee(order.discount)}\n` : '';
+  const text =
+    `${brandPlain} — ${subjectLine}\n\n` +
+    `Namaste ${order.customer.customerName},\n\n` +
+    `Thank you for your order! Here's a quick summary:\n\n` +
+    `Order ID: ${order.orderId}\n\n` +
+    `Items:\n${itemsPlain}\n\n` +
+    `Subtotal: ${rupee(order.subtotal)}\n` +
+    `Shipping: ${order.shipping === 0 ? 'Free' : rupee(order.shipping)}\n` +
+    `${discountLine}` +
+    `Total: ${rupee(order.total)}\n\n` +
+    `${paymentLine}\n\n` +
+    `We'll notify you again once your order ships. You can also track it anytime from your account.\n\n` +
+    `— ${brandPlain}\n${helpLine}`;
+
   try {
-    await resend.emails.send({
+    const response = await resend.emails.send({
       from: config.resendFromEmail,
       to: order.customer.email,
-      subject: `Order Confirmed — ${order.orderId} | Jac Ghré`,
-      html
+      subject: subjectLine,
+      html,
+      text
     });
+    console.log(`[email] Order confirmation sent → ${order.customer.email} (resend_id: ${response?.data?.id || 'n/a'})`);
   } catch (error) {
     console.error('[email] Failed to send order confirmation email:', error);
   }
@@ -101,17 +147,23 @@ export const sendWelcomeEmail = async (to: string, name: string): Promise<void> 
     console.warn('[email] RESEND_API_KEY not set — skipping welcome email for', to);
     return;
   }
-  const html = wrap(
-    'Welcome to Jac Ghré',
-    `<p>Dear ${name},</p><p>Your Jac Ghré account is ready. Explore our luxury botanical hair rituals, shimmering sun oils, and signature haute parfumerie. Enjoy faster checkout and live order tracking.</p>`
-  );
+  const subject = 'Welcome to Jac Ghré';
+  const bodyHtml = `<p>Dear ${name},</p><p>Your Jac Ghré account is ready. Explore our luxury botanical hair rituals, shimmering sun oils, and signature haute parfumerie. Enjoy faster checkout and live order tracking.</p>`;
+  const html = wrap(subject, bodyHtml);
+  const text =
+    `${brandPlain} — ${subject}\n\n` +
+    `Dear ${name},\n\n` +
+    `Your Jac Ghré account is ready. Explore our luxury botanical hair rituals, shimmering sun oils, and signature haute parfumerie. Enjoy faster checkout and live order tracking.\n\n` +
+    `— ${brandPlain}\n${helpLine}`;
   try {
-    await resend.emails.send({
+    const response = await resend.emails.send({
       from: config.resendFromEmail,
       to,
-      subject: 'Welcome to Jac Ghré',
-      html
+      subject,
+      html,
+      text
     });
+    console.log(`[email] Welcome email sent → ${to} (resend_id: ${response?.data?.id || 'n/a'})`);
   } catch (error) {
     console.error('[email] Failed to send welcome email:', error);
   }
@@ -119,30 +171,60 @@ export const sendWelcomeEmail = async (to: string, name: string): Promise<void> 
 
 export const sendVerificationEmail = async (to: string, name: string, code: string): Promise<void> => {
   if (!resend) throw new Error('Email verification is not configured. Add RESEND_API_KEY to the backend environment.');
-  const html = wrap(
-    'Verify your Jac Ghré account',
-    `<p>Dear ${name},</p><p>Use this one-time verification code to finish creating your Jac Ghré account:</p><p style="font-size:32px;letter-spacing:8px;font-weight:bold;text-align:center;color:#097B8A;margin:24px 0;">${code}</p><p>This code expires in 10 minutes. If you did not request an account, you can ignore this email.</p>`
-  );
-  await resend.emails.send({
-    from: config.resendFromEmail,
-    to,
-    subject: 'Verify your Jac Ghré account',
-    html
-  });
+  const subject = 'Verify your Jac Ghré account';
+  const bodyHtml = `<p>Dear ${name},</p><p>Use this one-time verification code to finish creating your Jac Ghré account:</p><p style="font-size:32px;letter-spacing:8px;font-weight:bold;text-align:center;color:#097B8A;margin:24px 0;">${code}</p><p>This code expires in 10 minutes. If you did not request an account, you can ignore this email.</p>`;
+  const html = wrap(subject, bodyHtml);
+  const text =
+    `${brandPlain} — ${subject}\n\n` +
+    `Dear ${name},\n\n` +
+    `Use this one-time verification code to finish creating your Jac Ghré account:\n\n` +
+    `Verification code: ${code}\n\n` +
+    `This code expires in 10 minutes. If you did not request an account, you can ignore this email.\n\n` +
+    `— ${brandPlain}\n${helpLine}`;
+  try {
+    console.log(`[email] Sending verification OTP → ${to} (from: ${config.resendFromEmail})`);
+    const response = await resend.emails.send({
+      from: config.resendFromEmail,
+      to,
+      subject,
+      html,
+      text
+    });
+    const emailId = response?.data?.id || 'n/a';
+    console.log(`[email] Verification email sent → ${to} (resend_id: ${emailId}) — match this ID with https://resend.com/emails/${emailId}`);
+  } catch (error) {
+    console.error('[email] ❌ Failed to send verification email:', error);
+    throw error;
+  }
 };
 
 export const sendPasswordResetEmail = async (to: string, name: string, code: string): Promise<void> => {
   if (!resend) throw new Error('Password reset email is not configured. Add RESEND_API_KEY to the backend environment.');
-  const html = wrap(
-    'Reset your Jac Ghré password',
-    `<p>Dear ${name},</p><p>Use this one-time code to reset your Jac Ghré password:</p><p style="font-size:32px;letter-spacing:8px;font-weight:bold;text-align:center;color:#097B8A;margin:24px 0;">${code}</p><p>This code expires in 10 minutes. If you did not request a password reset, you can ignore this email.</p>`
-  );
-  await resend.emails.send({
-    from: config.resendFromEmail,
-    to,
-    subject: 'Reset your Jac Ghré password',
-    html
-  });
+  const subject = 'Reset your Jac Ghré password';
+  const bodyHtml = `<p>Dear ${name},</p><p>Use this one-time code to reset your Jac Ghré password:</p><p style="font-size:32px;letter-spacing:8px;font-weight:bold;text-align:center;color:#097B8A;margin:24px 0;">${code}</p><p>This code expires in 10 minutes. If you did not request a password reset, you can ignore this email.</p>`;
+  const html = wrap(subject, bodyHtml);
+  const text =
+    `${brandPlain} — ${subject}\n\n` +
+    `Dear ${name},\n\n` +
+    `Use this one-time code to reset your Jac Ghré password:\n\n` +
+    `Reset code: ${code}\n\n` +
+    `This code expires in 10 minutes. If you did not request a password reset, you can ignore this email.\n\n` +
+    `— ${brandPlain}\n${helpLine}`;
+  try {
+    console.log(`[email] Sending password reset OTP → ${to} (from: ${config.resendFromEmail})`);
+    const response = await resend.emails.send({
+      from: config.resendFromEmail,
+      to,
+      subject,
+      html,
+      text
+    });
+    const emailId = response?.data?.id || 'n/a';
+    console.log(`[email] Password reset email sent → ${to} (resend_id: ${emailId}) — match this ID with https://resend.com/emails/${emailId}`);
+  } catch (error) {
+    console.error('[email] ❌ Failed to send password reset email:', error);
+    throw error;
+  }
 };
 
 export const CONTACT_INBOX = process.env.CONTACT_INBOX || 'Ghrebeauty@gmail.com';
@@ -164,22 +246,36 @@ export const sendContactFormEmail = async (payload: ContactFormPayload): Promise
     : undefined;
 
   const subjectLine = `[${payload.inquiryType || 'Contact Form'}] New message from ${payload.name}`;
-  const html = wrap(
-    subjectLine,
-    `
+  const bodyHtml = `
       <p><strong>Name:</strong> ${payload.name}</p>
       <p><strong>Phone:</strong> ${payload.phone}</p>
       ${payload.email ? `<p><strong>Email:</strong> ${payload.email}</p>` : ''}
       <p><strong>Inquiry Type:</strong> ${payload.inquiryType || 'General'}</p>
       <p style="margin-top:20px;padding:16px;background:#FAF7F0;border-radius:12px;border:1px solid #EAE1D0;white-space:pre-wrap;">${payload.message}</p>
-    `
-  );
+    `;
+  const html = wrap(subjectLine, bodyHtml);
+  const text =
+    `${brandPlain} — ${subjectLine}\n\n` +
+    `Name: ${payload.name}\n` +
+    `Phone: ${payload.phone}\n` +
+    `${payload.email ? `Email: ${payload.email}\n` : ''}` +
+    `Inquiry Type: ${payload.inquiryType || 'General'}\n\n` +
+    `Message:\n${payload.message}\n\n` +
+    `— ${brandPlain}\n${helpLine}`;
 
-  await resend.emails.send({
-    from: config.resendFromEmail,
-    to: CONTACT_INBOX,
-    subject: subjectLine,
-    replyTo: replyTo,
-    html
-  });
+  try {
+    console.log(`[email] Sending contact form → ${CONTACT_INBOX} (from: ${config.resendFromEmail})`);
+    const response = await resend.emails.send({
+      from: config.resendFromEmail,
+      to: CONTACT_INBOX,
+      subject: subjectLine,
+      replyTo: replyTo,
+      html,
+      text
+    });
+    console.log(`[email] Contact form email sent → ${CONTACT_INBOX} (resend_id: ${response?.data?.id || 'n/a'})`);
+  } catch (error) {
+    console.error('[email] ❌ Failed to send contact form email:', error);
+    throw error;
+  }
 };

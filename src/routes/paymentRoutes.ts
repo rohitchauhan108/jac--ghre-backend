@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { handleCallback, handleProviderCallback, getPayment } from '../controllers/paymentController.js';
+import { paymentLimiter } from '../app.js';
 
 const router = Router();
-router.get('/callback', handleCallback);
-router.post('/callback', handleProviderCallback);
-router.get('/:orderId', getPayment);
+router.get('/callback', paymentLimiter, handleCallback);
+router.post('/callback', paymentLimiter, handleProviderCallback);
+router.get('/:orderId', paymentLimiter, getPayment);
 export default router;
